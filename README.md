@@ -38,7 +38,7 @@ AppEnvironment? parseEnv(String value) {
 }
 
 Future<void> main() async {
-  final env = Environment.register<AppEnvironment, ExampleConfig>(
+  final env = Environment.register(
     configuration: {
       AppEnvironment.development:
           () async => const ExampleConfig('https://dev.example.com'),

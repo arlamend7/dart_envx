@@ -47,18 +47,24 @@ class EnvironmentInstance<K, C> {
 /// Environment using `String` keys. The resolver is optional and defaults to
 /// the identity function.
 class StringEnvironment<C> extends EnvironmentInstance<String, C> {
+  // ignore: use_super_parameters
   StringEnvironment._(EnvironmentService<String, C> service) : super._(service);
 }
 
-/// Environment backed by an enum key. A resolver is required to translate raw
-/// strings to enum values.
-class TypedEnvironment<K extends Enum, C> extends EnvironmentInstance<K, C> {
+/// Environment backed by a non-string key. A resolver is required to translate
+/// raw strings to those keys.
+class TypedEnvironment<K, C> extends EnvironmentInstance<K, C> {
+  // ignore: use_super_parameters
   TypedEnvironment._(EnvironmentService<K, C> service) : super._(service);
 }
 
 /// Factory for creating typed or non-typed [EnvironmentInstance]s.
 abstract final class Environment {
   /// Register an environment.
+  ///
+  /// Generic parameters [K] and [C] are typically inferred from
+  /// [configuration] and [defaultEnvironment]; explicit type arguments are
+  /// only needed for unusual cases.
   ///
   /// Parameters:
   /// - [configuration]: mapping from environment keys to async configuration

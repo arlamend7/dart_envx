@@ -21,7 +21,7 @@ TestEnv? parse(String input) {
 
 void main() {
   test('resolves current and specific environments', () async {
-    final env = Environment.register<TestEnv, TestConfig>(
+    final env = Environment.register(
       configuration: {
         TestEnv.dev: () async => const TestConfig('dev'),
         TestEnv.prod: () async => const TestConfig('prod'),
@@ -40,7 +40,7 @@ void main() {
   });
 
   test('falls back to default when resolver misses', () async {
-    final env = Environment.register<TestEnv, TestConfig>(
+    final env = Environment.register(
       configuration: {TestEnv.dev: () async => const TestConfig('dev')},
       resolver: parse,
       defaultEnvironment: TestEnv.dev,
@@ -51,10 +51,8 @@ void main() {
   });
 
   test('string environments work without resolver', () async {
-    final env = Environment.register<String, TestConfig>(
-      configuration: {
-        'dev': () async => const TestConfig('dev'),
-      },
+    final env = Environment.register(
+      configuration: {'dev': () async => const TestConfig('dev')},
       defaultEnvironment: 'dev',
     );
 
@@ -64,7 +62,7 @@ void main() {
 
   test('throws when typed environment lacks resolver', () {
     expect(
-      () => Environment.register<TestEnv, TestConfig>(
+      () => Environment.register(
         configuration: {TestEnv.dev: () async => const TestConfig('dev')},
         defaultEnvironment: TestEnv.dev,
       ),
