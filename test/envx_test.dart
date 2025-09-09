@@ -21,7 +21,7 @@ TestEnv? parse(String input) {
 
 void main() {
   test('resolves current and specific environments', () async {
-    final env = Environment.register(
+    final env = Environment.register<TestEnv, TestConfig>(
       configuration: {
         TestEnv.dev: () async => const TestConfig('dev'),
         TestEnv.prod: () async => const TestConfig('prod'),
@@ -30,17 +30,17 @@ void main() {
       defaultEnvironment: TestEnv.dev,
     );
 
-    expect(env.currentKey(fallbackValue: 'prod'), TestEnv.prod);
+    expect(env.currentKey(), TestEnv.dev);
 
-    final cfg = await env.current(fallbackValue: 'prod');
-    expect(cfg?.value, 'prod');
+    final cfg = await env.current();
+    expect(cfg?.value, 'dev');
 
     final devCfg = await env.getEnvironment('dev');
     expect(devCfg?.value, 'dev');
   });
 
   test('falls back to default when resolver misses', () async {
-    final env = Environment.register(
+    final env = Environment.register<TestEnv, TestConfig>(
       configuration: {TestEnv.dev: () async => const TestConfig('dev')},
       resolver: parse,
       defaultEnvironment: TestEnv.dev,

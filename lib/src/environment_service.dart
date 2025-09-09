@@ -44,14 +44,12 @@ class EnvironmentService<K, C> {
   /// - [fallbackValue]: optional raw value used if the define is empty.
   ///
   /// Never throws. If it can't resolve, it falls back to [registry.defaultEnvironment].
-  K resolveFromBuildDefine({String? key, String? fallbackValue}) {
+  K resolveFromBuildDefine({String? key}) {
     final k = (key == null || key.isEmpty) ? defineKey : key;
     // Note: `String.fromEnvironment` is evaluated at compile time.
-    const empty = '';
-    final defined = String.fromEnvironment(k, defaultValue: empty);
-    final candidate = defined.isEmpty ? (fallbackValue ?? empty) : defined;
-    if (candidate.isEmpty) return registry.defaultEnvironment;
-    final resolved = resolver(candidate);
+    final defined = String.fromEnvironment(k, defaultValue: defineKey);
+    if (defined.isEmpty) return registry.defaultEnvironment;
+    final resolved = resolver(defined);
     return resolved ?? registry.defaultEnvironment;
   }
 
@@ -67,8 +65,8 @@ class EnvironmentService<K, C> {
   }
 
   /// Convenience: resolve environment from the build define and return its config.
-  Future<C>? configFromBuildDefine({String? key, String? fallbackValue}) {
-    final env = resolveFromBuildDefine(key: key, fallbackValue: fallbackValue);
+  Future<C>? configFromBuildDefine({String? key}) {
+    final env = resolveFromBuildDefine(key: key);
     return configFor(env);
   }
 }

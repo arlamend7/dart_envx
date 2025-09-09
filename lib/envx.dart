@@ -28,34 +28,19 @@ class EnvironmentInstance<K, C> {
   ///
   /// No cancellation token: configuration builders are expected to complete
   /// quickly and cannot be cancelled.
-  Future<C>? current({String? fallbackValue}) {
-    final env = _service.resolveFromBuildDefine(fallbackValue: fallbackValue);
+  Future<C>? current() {
+    final env = _service.resolveFromBuildDefine();
     return _service.configFor(env);
   }
 
   /// Returns the environment key resolved from the build define.
-  K currentKey({String? fallbackValue}) =>
-      _service.resolveFromBuildDefine(fallbackValue: fallbackValue);
+  K currentKey() => _service.resolveFromBuildDefine();
 
   /// Resolve [raw] via the resolver and return its configuration.
   Future<C>? getEnvironment(String raw) => _service.configFromString(raw);
 
   /// Directly fetch configuration for [env].
   Future<C>? getEnvironmentByKey(K env) => _service.configFor(env);
-}
-
-/// Environment using `String` keys. The resolver is optional and defaults to
-/// the identity function.
-class StringEnvironment<C> extends EnvironmentInstance<String, C> {
-  // ignore: use_super_parameters
-  StringEnvironment._(EnvironmentService<String, C> service) : super._(service);
-}
-
-/// Environment backed by a non-string key. A resolver is required to translate
-/// raw strings to those keys.
-class TypedEnvironment<K, C> extends EnvironmentInstance<K, C> {
-  // ignore: use_super_parameters
-  TypedEnvironment._(EnvironmentService<K, C> service) : super._(service);
 }
 
 /// Factory for creating typed or non-typed [EnvironmentInstance]s.
@@ -81,40 +66,17 @@ abstract final class Environment {
     EnvResolver<K>? resolver,
     String defineKey = EnvxConstants.defaultDefineKey,
   }) {
-    if (K == String) {
-      final registry = EnvironmentRegistry<String, C>(
-        configs: configuration.cast<String, Future<C> Function()>(),
-        defaultEnvironment: defaultEnvironment as String,
-      );
-
-      final effectiveResolver =
-          (resolver as EnvResolver<String>?) ?? (input) => input;
-
-      final service = EnvironmentService<String, C>(
-        registry: registry,
-        resolver: effectiveResolver,
-        defineKey: defineKey,
-      );
-
-      return StringEnvironment._(service) as EnvironmentInstance<K, C>;
-    }
-
-    final res = resolver;
-    if (res == null) {
+    var res = resolver;
+    if (res == null && K != String) {
       throw ArgumentError('Resolver is required for non-string environments.');
+    } else if (res == null && K == String) {
+      res = (input) => input as K?;
     }
 
-    final registry = EnvironmentRegistry<K, C>(
-      configs: configuration,
-      defaultEnvironment: defaultEnvironment,
-    );
+    final registry = EnvironmentRegistry<K, C>(configs: configuration, defaultEnvironment: defaultEnvironment);
 
-    final service = EnvironmentService<K, C>(
-      registry: registry,
-      resolver: res,
-      defineKey: defineKey,
-    );
+    final service = EnvironmentService<K, C>(registry: registry, resolver: res!, defineKey: defineKey);
 
-    return TypedEnvironment._(service);
+    return EnvironmentInstance._(service);
   }
 }
