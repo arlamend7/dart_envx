@@ -1,39 +1,57 @@
-<!-- 
-This README describes the package. If you publish this package to pub.dev,
-this README's contents appear on the landing page for your package.
-
-For information about how to write a good package README, see the guide for
-[writing package pages](https://dart.dev/tools/pub/writing-package-pages). 
-
-For general information about developing packages, see the Dart guide for
-[creating packages](https://dart.dev/guides/libraries/create-packages)
-and the Flutter guide for
-[developing packages and plugins](https://flutter.dev/to/develop-packages). 
--->
-
-TODO: Put a short description of the package here that helps potential users
-know whether this package might be useful for them.
+`envx` resolves compile-time environment configuration for Dart and Flutter
+applications.
 
 ## Features
 
-TODO: List what your package can do. Maybe include images, gifs, or videos.
+- Custom resolver to map a `String` environment value to any enum.
+- Compile-time `APP_ENV` (or custom) variable with a configurable default.
+- Access the current configuration or any specific environment's config.
 
 ## Getting started
 
-TODO: List prerequisites and provide or point to information on how to
-start using the package.
+Define your environment enum, configuration class, and resolver. Then create an
+`Envx` instance with your configuration map.
 
 ## Usage
 
-TODO: Include short and useful examples for package users. Add longer examples
-to `/example` folder. 
-
 ```dart
-const like = 'sample';
+import 'package:envx/envx.dart';
+
+enum AppEnvironment { development, production }
+
+class ExampleConfig {
+  const ExampleConfig(this.baseUrl);
+  final String baseUrl;
+}
+
+AppEnvironment parseEnv(String value) {
+  switch (value) {
+    case 'production':
+    case 'prod':
+      return AppEnvironment.production;
+    default:
+      return AppEnvironment.development;
+  }
+}
+
+void main() {
+  const configs = <AppEnvironment, ExampleConfig>{
+    AppEnvironment.development: ExampleConfig('https://dev.example.com'),
+    AppEnvironment.production: ExampleConfig('https://example.com'),
+  };
+
+  final envx = Envx<AppEnvironment, ExampleConfig>(
+    values: configs,
+    resolver: parseEnv,
+  );
+
+  final ExampleConfig? config = envx.environment;
+  print('Base URL: ${config?.baseUrl}');
+}
 ```
 
 ## Additional information
 
-TODO: Tell users more about the package: where to find more information, how to 
-contribute to the package, how to file issues, what response they can expect 
-from the package authors, and more.
+This library is synchronous and maintains no global state beyond compile-time
+constants.
+

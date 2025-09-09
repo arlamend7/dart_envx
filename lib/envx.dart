@@ -1,8 +1,10 @@
-/// Support for doing something awesome.
+/// Provides compile-time environment configuration resolution.
 ///
-/// More dartdocs go here.
+/// Create an [Envx] instance with your own environment enum and configuration
+/// class to retrieve environment-specific values at runtime.
+///
+/// This library contains only synchronous utilities, so a cancellation token is
+/// unnecessary.
 library;
 
-export 'src/envx_base.dart';
-
-// TODO: Export any libraries intended for clients of this package.
+export 'src/envx_base.dart' show Envx, EnvironmentResolver;
