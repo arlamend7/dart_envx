@@ -21,8 +21,8 @@ TestEnv? parse(String input) {
 
 void main() {
   test('resolves current and specific environments', () async {
-    final env = Environment<TestEnv, TestConfig>(
-      configs: {
+    final env = Environment.register(
+      configuration: {
         TestEnv.dev: () async => const TestConfig('dev'),
         TestEnv.prod: () async => const TestConfig('prod'),
       },
@@ -40,13 +40,33 @@ void main() {
   });
 
   test('falls back to default when resolver misses', () async {
-    final env = Environment<TestEnv, TestConfig>(
-      configs: {TestEnv.dev: () async => const TestConfig('dev')},
+    final env = Environment.register(
+      configuration: {TestEnv.dev: () async => const TestConfig('dev')},
       resolver: parse,
       defaultEnvironment: TestEnv.dev,
     );
 
     final cfg = await env.getEnvironment('unknown');
     expect(cfg?.value, 'dev');
+  });
+
+  test('string environments work without resolver', () async {
+    final env = Environment.register(
+      configuration: {'dev': () async => const TestConfig('dev')},
+      defaultEnvironment: 'dev',
+    );
+
+    final cfg = await env.getEnvironment('dev');
+    expect(cfg?.value, 'dev');
+  });
+
+  test('throws when typed environment lacks resolver', () {
+    expect(
+      () => Environment.register(
+        configuration: {TestEnv.dev: () async => const TestConfig('dev')},
+        defaultEnvironment: TestEnv.dev,
+      ),
+      throwsA(isA<ArgumentError>()),
+    );
   });
 }
