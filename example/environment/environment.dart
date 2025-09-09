@@ -13,23 +13,13 @@ var _register = Environment.register(
     AppEnvironment.development: development.environment,
     AppEnvironment.production: production.environment,
   },
-  resolver: _parseEnv,
+  resolver: aliasesResolver({
+    AppEnvironment.development: ['development', 'dev'],
+    AppEnvironment.production: ['production', 'prod'],
+  }),
   defaultEnvironment: AppEnvironment.development,
   defineKey: 'APP_ENV',
 );
-
-AppEnvironment? _parseEnv(String value) {
-  switch (value) {
-    case 'production':
-    case 'prod':
-      return AppEnvironment.production;
-    case 'development':
-    case 'dev':
-      return AppEnvironment.development;
-    default:
-      return null;
-  }
-}
 
 Future environmentInitialize() async {
   environment = await _register.current();
