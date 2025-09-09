@@ -1,0 +1,52 @@
+/// Holds the mapping between an environment enum and its configuration.
+///
+/// Generic over:
+/// - [E]: your enum type, e.g. `AppEnvironment`
+/// - [C]: your configuration class/type, e.g. `EnvironmentConfig`
+///
+/// This class never throws. When a lookup misses, it returns `null` or
+/// falls back to the default config via `tryGetOrDefault`.
+class EnvironmentRegistry<E extends Enum, C> {
+  final Map<E, Future<C> Function()> _configs;
+
+  /// The environment to fall back to when resolution fails.
+  final E defaultEnvironment;
+
+  /// The default configuration (may be `null` if [defaultEnvironment] is not present in [configs]).
+  final Future<C> Function()? _defaultConfig;
+
+  /// Creates a registry. If [defaultEnvironment] is not present in [configs],
+  /// `_defaultConfig` will be `null`, which means `tryGetOrDefault` returns `null`
+  /// when both the requested and default configs are missing.
+  const EnvironmentRegistry._(this._configs, this.defaultEnvironment, this._defaultConfig);
+
+  /// Factory with validation at the boundary; never throws.
+  ///
+  /// - If [configs] is empty, still returns a registry (all lookups become `null`).
+  /// - If [defaultEnvironment] is absent in [configs], the registry stays valid,
+  ///   but `getDefault()` will return `null`.
+  factory EnvironmentRegistry({required Map<E, Future<C> Function()> configs, required E defaultEnvironment}) {
+    final defaultConfig = configs[defaultEnvironment];
+    return EnvironmentRegistry._(Map.unmodifiable(configs), defaultEnvironment, defaultConfig);
+  }
+
+  /// Returns the configuration for [env] or `null` if missing.
+  Future<C>? tryGet(E env) {
+    if (_configs.isEmpty) return null;
+    return _configs[env]?.call();
+  }
+
+  /// Returns the configuration for [env], or the default configuration if
+  /// the requested one is missing. May still be `null` if neither exists.
+  Future<C>? tryGetOrDefault(E env) {
+    final hit = tryGet(env);
+    if (hit != null) return hit;
+    return _defaultConfig?.call();
+  }
+
+  /// Returns the default configuration or `null` if it wasn't provided.
+  Future<C>? getDefault() => _defaultConfig?.call();
+
+  /// Returns the set of supported environments in this registry.
+  Iterable<E> supportedEnvironments() => _configs.keys;
+}
