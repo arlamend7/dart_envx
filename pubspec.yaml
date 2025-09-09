@@ -1,16 +1,18 @@
 name: envx
 description: Compile-time environment configuration resolver for Dart and Flutter.
-version: 1.0.1
-repository: https://github.com/example/envx
-homepage: https://github.com/example/envx
-issue_tracker: https://github.com/example/envx/issues
-documentation: https://example.com/envx/docs
+version: 1.0.0
+repository: https://github.com/arlamend7/dart_envx
+homepage: https://github.com/arlamend7/dart_envx
+issue_tracker: https://github.com/arlamend7/dart_envx/issues
+documentation: https://arlamend7.github.io/dart_envx/docs
+license: MIT
+example: example/envx_example.dart
 topics:
   - environment
   - configuration
 
 environment:
-  sdk: ^3.8.1
+  sdk: ">=3.0.0"
 
 dependencies:
   # path: ^1.8.0
