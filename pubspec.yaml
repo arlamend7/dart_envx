@@ -1,5 +1,5 @@
 name: envx
-description: A starting point for Dart libraries or applications.
+description: Compile-time environment configuration resolver for Dart and Flutter.
 version: 1.0.0
 # repository: https://github.com/my_org/my_repo
 
