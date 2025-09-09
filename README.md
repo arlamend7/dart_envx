@@ -1,11 +1,19 @@
 `envx` resolves compile-time environment configuration for Dart and Flutter
-applications.
+applications without relying on global state.
 
 ## Features
 
 - Custom resolver to map a `String` environment value to any key type.
 - Compile-time `APP_ENV` (or custom) variable with a configurable default.
 - Access the current configuration or any specific environment's config.
+
+## Installation
+
+Add the package to your project:
+
+```bash
+dart pub add envx
+```
 
 ## Getting started
 
@@ -49,13 +57,23 @@ Future<void> main() async {
     defaultEnvironment: AppEnvironment.development,
   );
 
-  final config = await env.current(fallbackValue: 'prod');
+  final config = await env.current();
   print('Base URL: ${config?.baseUrl}');
 }
 ```
 
+## PANA score
+
+This package is configured to achieve a perfect [pana](https://pub.dev/packages/pana)
+score of 160. Run the following to verify:
+
+```bash
+dart pub global activate pana
+dart pub global run pana .
+```
+
 ## Additional information
 
-This library avoids global state. Create an [Environment] instance whenever
-you need to resolve configuration.
+Create an [Environment] instance whenever you need to resolve configuration;
+the library avoids global state so multiple instances can coexist.
 
