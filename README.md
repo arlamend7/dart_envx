@@ -3,14 +3,14 @@ applications.
 
 ## Features
 
-- Custom resolver to map a `String` environment value to any enum.
+- Custom resolver to map a `String` environment value to any key type.
 - Compile-time `APP_ENV` (or custom) variable with a configurable default.
 - Access the current configuration or any specific environment's config.
 
 ## Getting started
 
-Define your environment enum, configuration class, and resolver. Then create an
-`Envx` instance with your configuration map.
+Define your environment enum (or key type), configuration class, and resolver.
+Then create an [Environment] instance with your configuration map.
 
 ## Usage
 
@@ -24,34 +24,38 @@ class ExampleConfig {
   final String baseUrl;
 }
 
-AppEnvironment parseEnv(String value) {
+AppEnvironment? parseEnv(String value) {
   switch (value) {
     case 'production':
     case 'prod':
       return AppEnvironment.production;
-    default:
+    case 'development':
+    case 'dev':
       return AppEnvironment.development;
+    default:
+      return null;
   }
 }
 
-void main() {
-  const configs = <AppEnvironment, ExampleConfig>{
-    AppEnvironment.development: ExampleConfig('https://dev.example.com'),
-    AppEnvironment.production: ExampleConfig('https://example.com'),
-  };
-
-  final envx = Envx<AppEnvironment, ExampleConfig>(
-    values: configs,
+Future<void> main() async {
+  final env = Environment<AppEnvironment, ExampleConfig>(
+    configs: {
+      AppEnvironment.development:
+          () async => const ExampleConfig('https://dev.example.com'),
+      AppEnvironment.production:
+          () async => const ExampleConfig('https://example.com'),
+    },
     resolver: parseEnv,
+    defaultEnvironment: AppEnvironment.development,
   );
 
-  final ExampleConfig? config = envx.environment;
+  final config = await env.current(fallbackValue: 'prod');
   print('Base URL: ${config?.baseUrl}');
 }
 ```
 
 ## Additional information
 
-This library is synchronous and maintains no global state beyond compile-time
-constants.
+This library avoids global state. Create an [Environment] instance whenever
+you need to resolve configuration.
 

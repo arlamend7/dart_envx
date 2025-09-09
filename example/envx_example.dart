@@ -7,27 +7,31 @@ class ExampleConfig {
   final String baseUrl;
 }
 
-AppEnvironment parseEnv(String value) {
+AppEnvironment? parseEnv(String value) {
   switch (value) {
     case 'production':
     case 'prod':
       return AppEnvironment.production;
-    default:
+    case 'development':
+    case 'dev':
       return AppEnvironment.development;
+    default:
+      return null;
   }
 }
 
-void main() {
-  const configs = <AppEnvironment, ExampleConfig>{
-    AppEnvironment.development: ExampleConfig('https://dev.example.com'),
-    AppEnvironment.production: ExampleConfig('https://example.com'),
-  };
-
-  final envx = Envx<AppEnvironment, ExampleConfig>(
-    values: configs,
+Future<void> main() async {
+  final env = Environment<AppEnvironment, ExampleConfig>(
+    configs: {
+      AppEnvironment.development: () async =>
+          const ExampleConfig('https://dev.example.com'),
+      AppEnvironment.production: () async =>
+          const ExampleConfig('https://example.com'),
+    },
     resolver: parseEnv,
+    defaultEnvironment: AppEnvironment.development,
   );
 
-  final ExampleConfig? config = envx.environment;
+  final config = await env.current(fallbackValue: 'prod');
   print('Base URL: ${config?.baseUrl}');
 }
