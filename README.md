@@ -38,8 +38,8 @@ AppEnvironment? parseEnv(String value) {
 }
 
 Future<void> main() async {
-  final env = Environment<AppEnvironment, ExampleConfig>(
-    configs: {
+  final env = Environment.register<AppEnvironment, ExampleConfig>(
+    configuration: {
       AppEnvironment.development:
           () async => const ExampleConfig('https://dev.example.com'),
       AppEnvironment.production:
