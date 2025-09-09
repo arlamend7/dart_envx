@@ -41,9 +41,9 @@ class EnvironmentService<K, C> {
   /// Read the compile-time define and resolve an environment.
   ///
   /// - [key]: optional override for the `String.fromEnvironment` key.
-  /// - [fallbackValue]: optional raw value used if the define is empty.
   ///
-  /// Never throws. If it can't resolve, it falls back to [registry.defaultEnvironment].
+  /// Never throws. If it can't resolve, it falls back to
+  /// [registry.defaultEnvironment].
   K resolveFromBuildDefine({String? key}) {
     final k = (key == null || key.isEmpty) ? defineKey : key;
     // Note: `String.fromEnvironment` is evaluated at compile time.

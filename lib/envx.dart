@@ -20,26 +20,27 @@ class EnvironmentInstance<K, C> {
 
   final EnvironmentService<K, C> _service;
 
-  /// Resolve the current environment from the build define and return its
-  /// configuration.
+  /// Resolve the current environment from the compile-time define and return
+  /// its configuration.
   ///
-  /// [fallbackValue] provides a value when the define is empty, useful for
-  /// tests or platforms without `--dart-define` support.
-  ///
-  /// No cancellation token: configuration builders are expected to complete
-  /// quickly and cannot be cancelled.
+  /// Returns `null` if no configuration could be loaded. No cancellation token
+  /// is used; configuration builders are expected to complete quickly.
   Future<C>? current() {
     final env = _service.resolveFromBuildDefine();
     return _service.configFor(env);
   }
 
-  /// Returns the environment key resolved from the build define.
+  /// Returns the environment key resolved from the compile-time define.
   K currentKey() => _service.resolveFromBuildDefine();
 
   /// Resolve [raw] via the resolver and return its configuration.
+  ///
+  /// Returns `null` when [raw] cannot be resolved or has no configuration.
   Future<C>? getEnvironment(String raw) => _service.configFromString(raw);
 
   /// Directly fetch configuration for [env].
+  ///
+  /// Returns `null` if [env] is not registered.
   Future<C>? getEnvironmentByKey(K env) => _service.configFor(env);
 }
 
@@ -73,9 +74,16 @@ abstract final class Environment {
       res = (input) => input as K?;
     }
 
-    final registry = EnvironmentRegistry<K, C>(configs: configuration, defaultEnvironment: defaultEnvironment);
+    final registry = EnvironmentRegistry<K, C>(
+      configs: configuration,
+      defaultEnvironment: defaultEnvironment,
+    );
 
-    final service = EnvironmentService<K, C>(registry: registry, resolver: res!, defineKey: defineKey);
+    final service = EnvironmentService<K, C>(
+      registry: registry,
+      resolver: res!,
+      defineKey: defineKey,
+    );
 
     return EnvironmentInstance._(service);
   }
