@@ -1,8 +1,9 @@
 # Release validation
 
-The current working version is 2.0.0 (unreleased). Do not tag/publish merely because
-the version is set. Confirm the changelog, public documentation, and package archive
-match the implementation before the maintainer authorizes a release.
+Version **2.0.0** is the stable release, dated **2026-10-12**. The changelog,
+public documentation, and package metadata describe that release. Publication
+to pub.dev and GitHub tags are separate distribution steps; the validation
+commands below do not publish the package.
 
 See [VALIDATION.md](VALIDATION.md) for the measured results for this checkout.
 

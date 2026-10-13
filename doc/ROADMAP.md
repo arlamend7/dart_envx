@@ -1,24 +1,22 @@
 # Versioned capability roadmap
 
-This separates shipped history, the implementation in this checkout, and proposed
-future work. Future version numbers are planning targets, not releases or working
+This separates the current stable release from proposed future capabilities. Future version numbers are planning targets, not releases or working
 APIs. No major-version removal or package publication is part of this change.
 
 | Version | Status | Capability and documentation boundary |
 | --- | --- | --- |
 | 1.0.0 | Published, verified 2026-10-12 | Environment factories, aliases, fallback |
 | 1.0.1 | Never published | Former documentation-only changelog entry folded into 2.0.0 |
-| 2.0.0 | Implemented here; unreleased | Compatibility fixes, parsers, ordered providers, immutable values, typed binding/validation, native file/process adapters |
+| 2.0.0 | Stable release, 2026-10-12 | Compatibility fixes, parsers, ordered providers, immutable values, typed binding/validation, native file/process adapters |
 | 2.1.x | Proposed | Stable `Options<T>`, scoped `OptionsSnapshot<T>`, versioned snapshots, richer section binding and DI recipes |
 | 2.2.x | Proposed | Validated atomic reload, file watches, filtered section monitors, last-known-good state, HTTP transport/polling, lifecycle and diagnostics |
 | 2.3.x | Proposed | Optional Flutter asset and ValueListenable companion, mobile/web examples, opt-in presets |
 | Future major | Optional; not scheduled | Deliberate removal of deprecated dynamic keys and nullable legacy futures, with migration guidance |
 
-## Why 2.0.0 is the next release
+## Version 2.0.0 scope
 
-The maintainer requested that the current work be committed as a new major
-version. **2.0.0 supersedes the unpublished 1.1.0 plan** in the original
-implementation specification; no intermediate 1.1.0 release is claimed.
+**2.0.0 supersedes the earlier 1.1.0 development plan** in the original
+implementation specification. No intermediate 1.1.0 release is claimed.
 
 This release implements the first stabilization/provider milestones. Providers
 establish precedence, conversion, and failure rules for later typed options and

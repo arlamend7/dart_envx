@@ -11,10 +11,10 @@ The library provides:
 - Application-owned typed models and validation before startup completes.
 - A small `ConfigSource` contract for your own loaders, without runtime dependencies.
 
-**This checkout prepares an unpublished 2.0.0 release.** Provider APIs and new
-registration options below require this checkout. Existing 1.0.0 consumers can
-follow the [migration guide](doc/MIGRATION.md). The [changelog](CHANGELOG.md)
-distinguishes implemented changes from published history.
+**Version 2.0.0** adds layered configuration providers while preserving the
+existing environment API. Existing 1.0.0 consumers can follow the
+[migration guide](doc/MIGRATION.md). See the [changelog](CHANGELOG.md) for release
+details and the [validation record](doc/VALIDATION.md) for quality checks.
 
 ## Contents
 
@@ -36,7 +36,8 @@ distinguishes implemented changes from published history.
 
 ## Install and check compatibility
 
-For the unpublished 2.0.0 APIs, use this local checkout:
+The examples below target **2.0.0**. To use the repository checkout in a Dart or
+Flutter application:
 
 ```yaml
 dependencies:
@@ -44,10 +45,13 @@ dependencies:
     path: ../dart_envx
 ```
 
-Run `dart pub get`, or `flutter pub get` in a Flutter application. To install the
-latest published release instead, use `dart pub add envx` or `flutter pub add envx`;
-1.0.0 was the only published version verified on 2026-10-12. Do not use a hosted
-`^2.0.0` constraint until that version is published.
+Run `dart pub get`, or `flutter pub get` in a Flutter application. Once 2.0.0 is
+available on pub.dev, use the hosted dependency instead:
+
+```yaml
+dependencies:
+  envx: ^2.0.0
+```
 
 | Requirement | Support |
 | --- | --- |

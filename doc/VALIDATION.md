@@ -1,8 +1,9 @@
 # 2.0.0 implementation and validation record
 
-Checked on **2026-10-12** on macOS ARM64. This release is prepared locally and has not been published.
+Version **2.0.0**, checked on **2026-10-12** on macOS ARM64.
 The shared conversation and supplied roadmap informed the Phase 0 + Phase 1
-implementation. Only 1.0.0 was published when the pub.dev API was checked.
+implementation. Release readiness is documented by the checks below; publishing
+the package is a separate distribution operation.
 
 ## Delivered scope
 

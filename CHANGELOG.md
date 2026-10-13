@@ -1,14 +1,13 @@
 # Changelog
 
-Versions are newest first. Only 1.0.0 was published on pub.dev when checked on
-2026-10-12. Entries marked unreleased describe this checkout, not a publication.
+Versions are newest first. Dates record finalized release changes.
 
-## 2.0.0 — Unreleased
+## 2.0.0 — 2026-10-12
 
 ### Major release
 
-- Prepare the configuration-provider expansion as 2.0.0 at the maintainer's
-  request, superseding the unpublished 1.1.0 plan.
+- Introduce configuration providers in version 2.0.0, superseding the earlier
+  1.1.0 development plan.
 - Preserve the existing environment API and Dart 3.0 SDK minimum. This major
   release does not remove legacy signatures or include the later monitoring,
   HTTP, or Flutter-adapter milestones.
