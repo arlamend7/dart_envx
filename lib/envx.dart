@@ -1,10 +1,18 @@
-// Public entry points for the envx environment resolver.
-//
-// Provides the [Environment] factory to configure and query typed or
-// non-typed environments without relying on global state.
+/// Layered configuration and typed environment selection for Dart and Flutter.
+///
+/// Use [EnvxBuilder] for providers or [Environment] for environment factories.
+/// Native filesystem/process providers are available in `envx_io.dart`.
+library;
 
 export 'src/default_resolvers.dart';
 export 'src/types.dart';
+export 'src/config/config_builder.dart';
+export 'src/config/config_exception.dart';
+export 'src/config/config_source.dart';
+export 'src/config/config_values.dart' show ConfigValues;
+export 'src/config/environment_values.dart';
+export 'src/parsers/json_config_parser.dart';
+export 'src/parsers/dotenv_parser.dart';
 
 import 'src/environment_registry.dart';
 import 'src/environment_service.dart';
@@ -20,27 +28,35 @@ class EnvironmentInstance<K, C> {
 
   final EnvironmentService<K, C> _service;
 
-  /// Resolve the current environment from the compile-time define and return
-  /// its configuration.
+  /// Resolves explicit environment input or the compile-time define.
   ///
-  /// Returns `null` if no configuration could be loaded. No cancellation token
-  /// is used; configuration builders are expected to complete quickly.
+  /// Missing keys fall back to the default unless strict mode is enabled.
+  /// Returns `null` only when both configurations are absent. Factory failures
+  /// propagate. There is no cancellation of pending factories.
   Future<C>? current() {
     final env = _service.resolveFromBuildDefine();
     return _service.configFor(env);
   }
 
-  /// Returns the environment key resolved from the compile-time define.
+  /// Clears cached factories; the next read starts a fresh load.
+  ///
+  /// Already returned futures still complete for their original callers.
+  void clearCache() => _service.registry.clearCache();
+
+  /// Returns the key resolved from explicit input or the compile-time define.
   K currentKey() => _service.resolveFromBuildDefine();
 
   /// Resolve [raw] via the resolver and return its configuration.
   ///
-  /// Returns `null` when [raw] cannot be resolved or has no configuration.
+  /// Unknown input or missing keys fall back to the default configuration.
+  /// Returns `null` only if both requested and default configurations are absent.
+  /// Resolver and factory exceptions propagate.
   Future<C>? getEnvironment(String raw) => _service.configFromString(raw);
 
   /// Directly fetch configuration for [env].
   ///
-  /// Returns `null` if [env] is not registered.
+  /// Missing keys fall back to the default; returns `null` if both are absent.
+  /// Strict instances throw instead of falling back.
   Future<C>? getEnvironmentByKey(K env) => _service.configFor(env);
 }
 
@@ -59,13 +75,23 @@ abstract final class Environment {
   /// - [resolver]: translation from raw strings to keys. Required for
   ///   non-string keys. When omitted and the key type is `String`, an identity
   ///   resolver is used.
-  /// - [defineKey]: compile-time define key. Defaults to
-  ///   [EnvxConstants.defaultDefineKey].
+  /// - [environment]: a value read at a const call site in the application.
+  ///   When omitted, the fixed `APP_ENV` const declaration is used.
+  /// - [cache]: opt-in per-key factory caching, including in-flight requests.
+  ///   Failed futures are evicted and can be retried.
+  /// - [strict]: rejects unknown or missing environments instead of falling back.
+  /// - [defineKey]: legacy dynamic key. Custom keys are not portable to AOT;
+  ///   pass [environment] instead. The default `APP_ENV` key is reliable.
   static EnvironmentInstance<K, C> register<K, C>({
     required Map<K, Future<C> Function()> configuration,
     required K defaultEnvironment,
     EnvResolver<K>? resolver,
+    @Deprecated(
+        'Pass environment: const String.fromEnvironment("YOUR_KEY") instead.')
     String defineKey = EnvxConstants.defaultDefineKey,
+    String? environment,
+    bool cache = false,
+    bool strict = false,
   }) {
     var res = resolver;
     if (res == null && K != String) {
@@ -77,12 +103,16 @@ abstract final class Environment {
     final registry = EnvironmentRegistry<K, C>(
       configs: configuration,
       defaultEnvironment: defaultEnvironment,
+      cache: cache,
+      strict: strict,
     );
 
     final service = EnvironmentService<K, C>(
       registry: registry,
       resolver: res!,
       defineKey: defineKey,
+      environment: environment,
+      strict: strict,
     );
 
     return EnvironmentInstance._(service);

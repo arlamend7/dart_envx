@@ -4,47 +4,50 @@
 /// - [K]: your environment key type, e.g. `AppEnvironment` or `String`
 /// - [C]: your configuration class/type, e.g. `EnvironmentConfig`
 ///
-/// This class never throws. When a lookup misses, it returns `null` or
-/// falls back to the default config via `tryGetOrDefault`.
+/// Missing lookups can fall back to the default. Factory exceptions propagate.
+/// Optional caching shares in-flight requests and retains successful values.
 class EnvironmentRegistry<K, C> {
   final Map<K, Future<C> Function()> _configs;
 
   /// The environment to fall back to when resolution fails.
   final K defaultEnvironment;
 
-  /// The default configuration (may be `null` if [defaultEnvironment] is not present in [configs]).
-  final Future<C> Function()? _defaultConfig;
+  final bool _cacheEnabled;
+  final bool _strict;
+  final Map<K, Future<C>> _cache = {};
 
-  /// Creates a registry. If [defaultEnvironment] is not present in [configs],
-  /// `_defaultConfig` will be `null`, which means `tryGetOrDefault` returns `null`
-  /// when both the requested and default configs are missing.
-  const EnvironmentRegistry._(
-    this._configs,
-    this.defaultEnvironment,
-    this._defaultConfig,
-  );
-
-  /// Factory with validation at the boundary; never throws.
-  ///
-  /// - If [configs] is empty, still returns a registry (all lookups become `null`).
-  /// - If [defaultEnvironment] is absent in [configs], the registry stays valid,
-  ///   but `getDefault()` will return `null`.
-  factory EnvironmentRegistry({
+  /// Creates a registry. Strict mode requires a registered default environment.
+  EnvironmentRegistry({
     required Map<K, Future<C> Function()> configs,
-    required K defaultEnvironment,
-  }) {
-    final defaultConfig = configs[defaultEnvironment];
-    return EnvironmentRegistry._(
-      Map.unmodifiable(configs),
-      defaultEnvironment,
-      defaultConfig,
-    );
+    required this.defaultEnvironment,
+    bool cache = false,
+    bool strict = false,
+  })  : _configs = Map.unmodifiable(configs),
+        _cacheEnabled = cache,
+        _strict = strict {
+    if (strict && !configs.containsKey(defaultEnvironment)) {
+      throw StateError('Default environment is not registered.');
+    }
   }
+
+  /// Clears successful and in-flight cached entries without canceling callers.
+  void clearCache() => _cache.clear();
 
   /// Returns the configuration for [env] or `null` if missing.
   Future<C>? tryGet(K env) {
-    if (_configs.isEmpty) return null;
-    return _configs[env]?.call();
+    final factory = _configs[env];
+    if (factory == null) return null;
+    if (!_cacheEnabled) return factory();
+    final cached = _cache[env];
+    if (cached != null) return cached;
+    late final Future<C> pending;
+    pending = Future<C>.sync(factory).then((value) => value,
+        onError: (Object error, StackTrace stack) {
+      if (identical(_cache[env], pending)) _cache.remove(env);
+      Error.throwWithStackTrace(error, stack);
+    });
+    _cache[env] = pending;
+    return pending;
   }
 
   /// Returns the configuration for [env], or the default configuration if
@@ -52,11 +55,12 @@ class EnvironmentRegistry<K, C> {
   Future<C>? tryGetOrDefault(K env) {
     final hit = tryGet(env);
     if (hit != null) return hit;
-    return _defaultConfig?.call();
+    if (_strict) throw StateError('Environment is not registered.');
+    return getDefault();
   }
 
   /// Returns the default configuration or `null` if it wasn't provided.
-  Future<C>? getDefault() => _defaultConfig?.call();
+  Future<C>? getDefault() => tryGet(defaultEnvironment);
 
   /// Returns the set of supported environments in this registry.
   Iterable<K> supportedEnvironments() => _configs.keys;

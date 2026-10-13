@@ -1,0 +1,10 @@
+.git/
+.github/
+.vscode/
+.dart_tool/
+pubspec.lock
+doc/api/
+coverage/
+ENVX_CODEX_WORK_IMPLEMENTATION_SPEC.md
+.env
+.env.*

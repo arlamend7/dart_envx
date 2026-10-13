@@ -1,5 +1,8 @@
 import 'types.dart';
 
+/// Set `strictCollisions: true` to reject aliases assigned to different values.
+/// By default, the last assignment wins for 1.x compatibility.
+///
 /// Build a resolver from explicit alias lists per enum value.
 ///
 /// Example:
@@ -18,8 +21,9 @@ EnvResolver<E> aliasesResolver<E extends Enum>(
   Map<E, List<String>> aliases, {
   bool caseInsensitive = true,
   bool allowEnumName = true,
+  bool strictCollisions = false,
 }) {
-  // Validate eagerly, no throws – just produce a resolver that never matches if inputs are unusable.
+  // Empty input creates a resolver that never matches.
   if (aliases.isEmpty) {
     return (_) => null;
   }
@@ -28,15 +32,22 @@ EnvResolver<E> aliasesResolver<E extends Enum>(
 
   String keyOf(String s) => caseInsensitive ? s.toLowerCase() : s;
 
+  void add(String key, E value) {
+    if (strictCollisions && map.containsKey(key) && map[key] != value) {
+      throw ArgumentError('Conflicting normalized environment aliases.');
+    }
+    map[key] = value;
+  }
+
   for (final entry in aliases.entries) {
     final env = entry.key;
     final values = entry.value;
     if (allowEnumName) {
-      map[keyOf(env.name)] = env;
+      add(keyOf(env.name), env);
     }
     for (final raw in values) {
       if (raw.trim().isEmpty) continue;
-      map[keyOf(raw.trim())] = env;
+      add(keyOf(raw.trim()), env);
     }
   }
 
@@ -51,6 +62,9 @@ EnvResolver<E> aliasesResolver<E extends Enum>(
   };
 }
 
+/// Set `strictCollisions: true` to reject conflicting normalized tokens.
+/// By default, the last assignment wins for 1.x compatibility.
+///
 /// Build a resolver from a flat string->enum mapping.
 /// Useful when you already have a normalized token map.
 ///
@@ -68,6 +82,7 @@ EnvResolver<E> aliasesResolver<E extends Enum>(
 EnvResolver<E> tokenResolver<E extends Enum>(
   Map<String, E> tokens, {
   bool caseInsensitive = true,
+  bool strictCollisions = false,
 }) {
   if (tokens.isEmpty) return (_) => null;
 
@@ -77,7 +92,13 @@ EnvResolver<E> tokenResolver<E extends Enum>(
   for (final entry in tokens.entries) {
     final k = entry.key.trim();
     if (k.isEmpty) continue;
-    map[keyOf(k)] = entry.value;
+    final normalized = keyOf(k);
+    if (strictCollisions &&
+        map.containsKey(normalized) &&
+        map[normalized] != entry.value) {
+      throw ArgumentError('Conflicting normalized environment tokens.');
+    }
+    map[normalized] = entry.value;
   }
 
   if (map.isEmpty) return (_) => null;

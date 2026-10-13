@@ -3,10 +3,8 @@ import 'environment_registry.dart';
 
 /// Resolves the current environment and returns typed configuration.
 ///
-/// Pure core with I/O only at `resolveFromBuildDefine`, which reads the
-/// compile-time define via `String.fromEnvironment`.
-///
-/// No-throw design: unrecognized values fall back to [registry.defaultEnvironment].
+/// Explicit values and a fixed const `APP_ENV` declaration support AOT builds.
+/// Unknown values fall back unless strict mode is enabled; exceptions propagate.
 class EnvironmentService<K, C> {
   /// Where we keep configs and the default environment.
   final EnvironmentRegistry<K, C> registry;
@@ -16,6 +14,12 @@ class EnvironmentService<K, C> {
 
   /// Compile-time define key, defaults to [EnvxConstants.defaultDefineKey].
   final String defineKey;
+
+  /// Explicit compile-time value supplied by application code.
+  final String? environment;
+
+  /// Whether unknown or empty selection is rejected.
+  final bool strict;
 
   /// Creates a new [EnvironmentService].
   ///
@@ -27,30 +31,33 @@ class EnvironmentService<K, C> {
     required this.registry,
     required this.resolver,
     this.defineKey = EnvxConstants.defaultDefineKey,
+    this.environment,
+    this.strict = false,
   });
 
   /// Parse [raw] via [resolver], falling back to [registry.defaultEnvironment] if null/empty/unrecognized.
   K resolveFromString(String? raw) {
-    if (raw == null) return registry.defaultEnvironment;
-    final trimmed = raw.trim();
-    if (trimmed.isEmpty) return registry.defaultEnvironment;
-    final resolved = resolver(trimmed);
+    final trimmed = raw?.trim() ?? '';
+    final resolved = trimmed.isEmpty ? null : resolver(trimmed);
+    if (resolved == null && strict) {
+      throw StateError('Environment selection is missing or unrecognized.');
+    }
     return resolved ?? registry.defaultEnvironment;
   }
 
-  /// Read the compile-time define and resolve an environment.
+  /// Resolves explicit input or the fixed const `APP_ENV` declaration.
   ///
-  /// - [key]: optional override for the `String.fromEnvironment` key.
-  ///
-  /// Never throws. If it can't resolve, it falls back to
-  /// [registry.defaultEnvironment].
+  /// Custom dynamic keys remain solely for 1.x compatibility and are not
+  /// guaranteed outside JIT execution. Inject [environment] for portable builds.
   K resolveFromBuildDefine({String? key}) {
+    if (environment != null) return resolveFromString(environment);
     final k = (key == null || key.isEmpty) ? defineKey : key;
-    // Note: `String.fromEnvironment` is evaluated at compile time.
-    final defined = String.fromEnvironment(k, defaultValue: defineKey);
-    if (defined.isEmpty) return registry.defaultEnvironment;
-    final resolved = resolver(defined);
-    return resolved ?? registry.defaultEnvironment;
+    if (k == EnvxConstants.defaultDefineKey) {
+      return resolveFromString(const String.fromEnvironment('APP_ENV'));
+    }
+    // Compatibility only: dynamic compiler lookups are not portable to AOT.
+    return resolveFromString(
+        String.fromEnvironment(k, defaultValue: defineKey));
   }
 
   /// Get configuration for [env] with fallback to default.
