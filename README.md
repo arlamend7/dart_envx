@@ -1,7 +1,8 @@
 # envx
 
-Select an environment, combine configuration sources, and pass validated settings
-to your Dart or Flutter application without global state or code generation.
+Load a base JSON file, layer environment-specific settings over it, and read the
+section your application needs. envx supports Dart and Flutter without global
+state or code generation.
 
 The library provides:
 
@@ -20,7 +21,10 @@ details and the [validation record](doc/VALIDATION.md) for quality checks.
 
 - [Install and check compatibility](#install-and-check-compatibility)
 - [Run the examples](#run-the-examples)
-- [Quick start](#quick-start)
+- [Quick start: appsettings-style configuration](#quick-start-appsettings-style-configuration)
+- [Map environment overrides and validate settings](#map-environment-overrides-and-validate-settings)
+- [Choose how to read environment variables](#choose-how-to-read-environment-variables)
+- [Your proposed flow and the current API](#your-proposed-flow-and-the-current-api)
 - [Select environments with strings or enums](#select-environments-with-strings-or-enums)
 - [Choose fallback and strict behavior](#choose-fallback-and-strict-behavior)
 - [Combine sources and control precedence](#combine-sources-and-control-precedence)
@@ -84,7 +88,8 @@ dart run example/configuration_example.dart
 | [Main package example](example/envx_example.dart) | Enum selection, custom JSON loading, merging, typed models, validation, dotenv parsing, optional values, caching |
 | [Native providers](example/configuration_example.dart) | JSON overlays, dotenv files, process overrides, HTTPS validation, constructor injection |
 
-The main example is self-contained: it reads no files and makes no network calls.
+The main example is an optional feature tour: it reads no files and makes no
+network calls. For a simple JSON setup, start with the appsettings quick start below.
 It is referenced by `example: example/envx_example.dart` in the package's
 [pubspec](pubspec.yaml). That field is custom descriptive metadata; pub.dev finds
 the Example tab through conventional paths such as `example/envx_example.dart`.
@@ -95,31 +100,227 @@ With no overrides, the native example selects development and prints
 A local `.env` or process variable can override it again. Unknown selections in
 the main example fail because it enables strict mode.
 
-## Quick start
+## Quick start: appsettings-style configuration
 
-This complete program also exists as [minimal_example.dart](example/minimal_example.dart):
+For a native Dart application, use a .NET-style appsettings flow: two files and
+one build:
 
 ```dart
-import 'package:envx/envx.dart';
+import 'package:envx/envx_io.dart';
+
+const env =
+    String.fromEnvironment('ENVIRONMENT', defaultValue: 'development');
 
 Future<void> main() async {
   final settings = await EnvxBuilder()
-      .addMemory({
-        'api': {'baseUrl': 'https://api.example.com', 'timeoutSeconds': 30},
-      })
-      .addMemory({
-        'api': {'timeoutSeconds': 10},
-      })
+      .addJsonFile('example/config/appsettings.json')
+      .addJsonFile('example/config/appsettings.$env.json', optional: true)
       .buildValues();
 
-  print(settings.getString('api.baseUrl')); // https://api.example.com
-  print(settings.getInt('api.timeoutSeconds')); // 10
+  final api = settings.getSection('api');
+  print(api.getString('baseUrl'));
+  print(api.getInt('timeoutSeconds'));
 }
 ```
 
-Subsequent snippets use `package:envx/envx.dart` unless another import is shown.
-Place snippets containing `await` inside an `async` function. Each recipe declares
-its own inputs; the model and custom-source recipes also define reusable classes.
+Save this as `example/appsettings_demo.dart` and run it from the repository root:
+
+```sh
+dart run -DENVIRONMENT=production example/appsettings_demo.dart
+```
+
+The paths above use the repository's existing JSON fixtures. In your own native
+application, replace them with your files, such as `config/appsettings.json`.
+
+Base file:
+
+```json
+{
+  "api": {
+    "baseUrl": "https://api.example.com",
+    "timeoutSeconds": 30
+  }
+}
+```
+
+Development overlay:
+
+```json
+{
+  "api": {
+    "baseUrl": "https://dev.example.com"
+  }
+}
+```
+
+The result uses the development URL and keeps the base timeout of 30. Later
+sources override earlier values. **An absent optional overlay is skipped.** An
+unreadable or malformed file still throws; `optional: true` does not suppress
+all failures.
+
+To get the section's raw map, use the existing plural property:
+
+```dart
+final apiSettings = settings.getSection('api').values;
+```
+
+`addJsonFile()` reads native filesystem files. A path beginning with `assets/`
+is still a filesystem path to this provider; it does not load Flutter's bundled
+assets. For a Flutter application, use the [asset-loading recipe](#initialize-a-flutter-application).
+
+## Map environment overrides and validate settings
+
+For your `API_URL` and `API_TIMEOUT` inputs, use the existing
+`addEnvironmentVariables()` method with an explicit mapping. This complete native
+example builds on the same two JSON files:
+
+```dart
+import 'dart:io';
+import 'package:envx/envx_io.dart';
+
+const env =
+    String.fromEnvironment('ENVIRONMENT', defaultValue: 'development');
+
+Future<void> main() async {
+  final apiUrl = Platform.environment['API_URL'];
+  final apiTimeout = Platform.environment['API_TIMEOUT'];
+
+  final settings = await EnvxBuilder()
+      .addJsonFile('example/config/appsettings.json')
+      .addJsonFile('example/config/appsettings.$env.json', optional: true)
+      .addEnvironmentVariables(environment: {
+        if (apiUrl != null) 'api__baseUrl': apiUrl,
+        if (apiTimeout != null) 'api__timeoutSeconds': apiTimeout,
+      })
+      .build(ConfigValues.new, validate: SettingsValidator.validate);
+
+  final api = settings.getSection('api');
+  print(api.getString('baseUrl'));
+  print(api.getInt('timeoutSeconds'));
+}
+
+class SettingsValidator {
+  static void validate(ConfigValues settings) {
+    final api = settings.getSection('api');
+    final url = Uri.tryParse(api.getString('baseUrl'));
+    if (url == null || url.scheme != 'https' || url.host.isEmpty) {
+      throw const ConfigValidationException('API URL must use HTTPS.');
+    }
+    if (api.getInt('timeoutSeconds') <= 0) {
+      throw const ConfigValidationException('API timeout must be positive.');
+    }
+  }
+}
+```
+
+Missing variables are omitted, so they **do not overwrite the JSON values**.
+An explicitly empty string is an override, not an absent variable; it will fail
+this validator when it is not a valid URL or timeout. Do not put null into an
+explicit override map to mean “skip”: null normally replaces an earlier value.
+
+`__` maps to nested keys. Use `api__Url` instead of `api__baseUrl` if your JSON key
+is literally `Url`: keys are case-sensitive. Values remain strings until a typed
+getter or model binder converts them.
+
+With the code saved as `example/appsettings_demo.dart`, run on macOS/Linux:
+
+```sh
+API_URL=https://api.example.com API_TIMEOUT=10 dart run -DENVIRONMENT=production example/appsettings_demo.dart
+```
+
+If you control the process variable names, the shorter version is
+`.addEnvironmentVariables(prefix: 'APP__')` with variables named
+`APP__api__baseUrl` and `APP__api__timeoutSeconds`. No explicit map is then needed.
+
+There are two existing build choices:
+
+| Need | Final builder call |
+| --- | --- |
+| Raw configuration with typed getters | `.buildValues()` |
+| Raw configuration with validation | `.build(ConfigValues.new, validate: SettingsValidator.validate)` |
+| Your own model with optional validation | `.build(AppSettings.fromJson, validate: validateSettings)` |
+
+The last row uses an application-defined model and validator; see
+[typed model binding](#bind-models-and-inject-settings). Validation completes before
+settings are returned. There is no separate `addValidator()` in the current API.
+
+## Choose how to read environment variables
+
+Dart has two different environment mechanisms. Choose the one that matches your
+application:
+
+| Source | Read | Where it works |
+| --- | --- | --- |
+| Compiler definition | `const String.fromEnvironment('ENVIRONMENT', defaultValue: 'development')` | Dart and Flutter, including web |
+| Native process variable | `Platform.environment['ENVIRONMENT'] ?? 'development'` | Native Dart; not Flutter web |
+
+For a native server configured entirely through its process environment, replace
+the const declaration with the second form. For Flutter builds, keep the const
+form and run:
+
+```sh
+flutter run --dart-define=ENVIRONMENT=production
+```
+
+The one-line const expression is the simplest reliable compiler lookup. A function
+such as `readEnvironment('ENVIRONMENT')` cannot reliably forward an arbitrary
+runtime key to `String.fromEnvironment` in compiled Dart. `var env =
+String.fromEnvironment(...)` without a const invocation is not a portable shortcut.
+
+For Flutter compiler overrides, declare the values once in application code:
+
+```dart
+const env =
+    String.fromEnvironment('ENVIRONMENT', defaultValue: 'development');
+const apiUrl = bool.hasEnvironment('API_URL')
+    ? String.fromEnvironment('API_URL')
+    : null;
+const apiTimeout = bool.hasEnvironment('API_TIMEOUT')
+    ? String.fromEnvironment('API_TIMEOUT')
+    : null;
+```
+
+Then add this source **after** your JSON/asset sources, using the cross-platform
+core builder:
+
+```dart
+.addMemory({
+  'api': {
+    if (apiUrl != null) 'baseUrl': apiUrl,
+    if (apiTimeout != null) 'timeoutSeconds': apiTimeout,
+  },
+})
+```
+
+Here `addMemory()` simply adds the provided Dart map. The presence checks make
+missing definitions leave earlier JSON values intact, including in Flutter web.
+This snippet is a step in a builder chain, not a standalone statement.
+
+## Your proposed flow and the current API
+
+Existing public function names are unchanged. Translate the proposed setup as
+follows:
+
+| Proposed spelling / behavior | Current envx API |
+| --- | --- |
+| `addJson(path)` | `addJsonFile(path)` for native files; `addSource(...)` with your loader for Flutter assets |
+| Optional environment JSON | `addJsonFile(path, optional: true)` skips missing files only |
+| `addFromEnvironment(path, name)` | `addEnvironmentVariables(environment: mappedValues)` for process variables, or `addMemory(...)` for const compiler values |
+| `addValidator(validator)` | `build(binder, validate: validator)` |
+| `BuildValues()` | `buildValues()`; Dart uses a lowercase method name |
+| `getSection('api').value` | `getSection('api').values`, or typed getters on the section |
+| `addLiveSetting(url, refresh: ...)` | **Future capability; not implemented in 2.0.0** |
+
+A five-minute HTTP refresh is not a current builder option. `buildValues()` returns
+an immutable result, not a live settings object. A custom HTTP source can fetch
+once during a build, and another explicit build can fetch again; that does not
+provide polling, change notifications, or lifecycle management automatically.
+
+A future live-settings adapter must validate before publishing each update,
+retain the last valid settings on failure, expose changes, and support disposal.
+If a remote source is last in the chain as in your proposal, its values would
+have highest precedence. The [roadmap](doc/ROADMAP.md) tracks this work; no live
+methods are presented as available APIs here.
 
 ## Select environments with strings or enums
 
@@ -400,61 +601,69 @@ or Flutter assets; 2.0.0 does not include a first-party HTTP or asset adapter.
 
 ## Initialize a Flutter application
 
-After adding envx to an existing Flutter app, this complete `lib/main.dart`
-awaits settings before building widgets and injects them through a constructor:
+For Flutter, use `rootBundle.loadString` through a custom `ConfigSource`. The
+following is application code using the existing public API, not a new envx
+asset method:
 
 ```dart
 import 'package:envx/envx.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
-const apiBaseUrl = String.fromEnvironment(
-  'API_BASE_URL',
-  defaultValue: 'https://dev.example.com',
-);
-
-Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  final settings = await EnvxBuilder()
-      .addMemory({'api': {'baseUrl': apiBaseUrl}})
-      .buildValues();
-  runApp(ConfigApp(settings: settings));
-}
-
-class ConfigApp extends StatelessWidget {
-  const ConfigApp({super.key, required this.settings});
-  final ConfigValues settings;
+class JsonAssetSource implements ConfigSource {
+  const JsonAssetSource(this.path);
+  final String path;
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      home: Scaffold(
-        appBar: AppBar(title: const Text('envx configuration')),
-        body: Center(child: Text(settings.getString('api.baseUrl'))),
-      ),
-    );
-  }
+  Future<Map<String, Object?>> load() async =>
+      parseJsonConfig(await rootBundle.loadString(path));
+}
+
+const env =
+    String.fromEnvironment('ENVIRONMENT', defaultValue: 'development');
+
+Future<ConfigValues> loadSettings() {
+  return EnvxBuilder()
+      .addSource(const JsonAssetSource('assets/appsettings.json'))
+      .addSource(JsonAssetSource('assets/appsettings.$env.json'))
+      .buildValues();
 }
 ```
 
-Run with `flutter run --dart-define=API_BASE_URL=https://api.example.com`.
-The core works with Flutter web; do not import `envx_io.dart` in browser code.
+At the beginning of your existing Flutter `main()`:
 
-To load bundled JSON using the custom source above, import
-`package:flutter/services.dart` and add
-`JsonTextSource(() => rootBundle.loadString('assets/config/appsettings.json'))`
-to the builder. Create that file and declare it in the **consuming application's**
-pubspec:
+```dart
+WidgetsFlutterBinding.ensureInitialized();
+final settings = await loadSettings();
+final apiSettings = settings.getSection('api').values;
+// Pass settings to your existing app/services, then call runApp as usual.
+```
+
+`WidgetsFlutterBinding` comes from `package:flutter/widgets.dart` (also exported
+by `material.dart`). Declare the files in the **consuming application's** pubspec:
 
 ```yaml
 flutter:
   assets:
-    - assets/config/appsettings.json
+    - assets/appsettings.json
+    - assets/appsettings.development.json
+    - assets/appsettings.production.json
 ```
 
-This uses Flutter's loader through your custom source. The package's own pubspec
-does not declare application assets. Bundled assets and compiler definitions
-require rebuild/deployment to change; this initialization code is not a reactive
-monitor. Keep secrets out of client-visible settings, including downloaded JSON.
+Create both overlays; an unused overlay can contain `{}`. This minimal custom
+asset source treats both selected files as required. Native `optional: true`
+does not apply to Flutter assets. If your application needs missing-asset
+handling, implement that policy explicitly in its custom source; do not catch
+all parse or validation failures and silently continue.
+
+Add the [compiler override map](#choose-how-to-read-environment-variables) after
+the asset sources if needed. Use `build(ConfigValues.new, validate: ...)` for raw
+validated settings or `build(AppSettings.fromJson, validate: ...)` for a model.
+Await loading before using settings. The core works on Flutter web and does not
+require `dart:io`.
+
+Bundled assets and compiler definitions require rebuild/deployment to change.
+Keep secrets out of client-visible configuration, including downloaded JSON.
+The package's own pubspec does not declare your application's assets.
 
 ## Cache factories and rebuild configuration
 
