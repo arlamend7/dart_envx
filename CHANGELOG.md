@@ -2,6 +2,15 @@
 
 Versions are newest first. Dates record finalized release changes.
 
+## 2.0.1 — 2026-10-14
+
+- Simplify the main example to base JSON, optional environment JSON, process
+  overrides, and section access. Move the longer walkthrough to an advanced example.
+- Add a pub.dev Example-tab guide with configuration fixtures and run instructions.
+- Refresh package metadata and installation guidance for the published 2.0.x API.
+- Align example commands and CI with the `ENVIRONMENT` compiler definition.
+- No public API changes or new runtime dependencies.
+
 ## 2.0.0 — 2026-10-12
 
 ### Major release

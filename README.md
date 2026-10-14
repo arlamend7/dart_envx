@@ -40,21 +40,22 @@ details and the [validation record](doc/VALIDATION.md) for quality checks.
 
 ## Install and check compatibility
 
-The examples below target **2.0.0**. To use the repository checkout in a Dart or
-Flutter application:
+The examples use the **2.0.x** API. Install the published package:
+
+```yaml
+dependencies:
+  envx: ^2.0.0
+```
+
+Run `dart pub get`, or `flutter pub get` in a Flutter application.
+Version 2.0.1 updates documentation and examples without changing the API.
+
+To try the repository checkout locally instead:
 
 ```yaml
 dependencies:
   envx:
     path: ../dart_envx
-```
-
-Run `dart pub get`, or `flutter pub get` in a Flutter application. Once 2.0.0 is
-available on pub.dev, use the hosted dependency instead:
-
-```yaml
-dependencies:
-  envx: ^2.0.0
 ```
 
 | Requirement | Support |
@@ -78,27 +79,31 @@ From the repository root:
 dart pub get
 dart run example/minimal_example.dart
 dart run example/envx_example.dart
-dart run -DAPP_ENV=production example/envx_example.dart
+dart run -DENVIRONMENT=production example/envx_example.dart
 dart run example/configuration_example.dart
 ```
 
 | Example | Demonstrates |
 | --- | --- |
 | [Minimal quick start](example/minimal_example.dart) | Two sources, precedence, typed reads; no setup beyond dependencies |
-| [Main package example](example/envx_example.dart) | Enum selection, custom JSON loading, merging, typed models, validation, dotenv parsing, optional values, caching |
+| [Main package example](example/envx_example.dart) | Base JSON, optional environment overlay, process overrides, and section access |
+| [Advanced walkthrough](example/advanced_example.dart) | Enum aliases, custom JSON loading, typed models, validation, and caching |
 | [Native providers](example/configuration_example.dart) | JSON overlays, dotenv files, process overrides, HTTPS validation, constructor injection |
 
-The main example is an optional feature tour: it reads no files and makes no
-network calls. For a simple JSON setup, start with the appsettings quick start below.
-It is referenced by `example: example/envx_example.dart` in the package's
-[pubspec](pubspec.yaml). That field is custom descriptive metadata; pub.dev finds
-the Example tab through conventional paths such as `example/envx_example.dart`.
+The [pub.dev example guide](example/README.md) includes the short appsettings
+example, its JSON files, and expected output. pub.dev discovers `example/README.md`
+for the Example tab. The pubspec's `example` field points to the runnable Dart
+entry point; it is descriptive metadata, not the tab-selection mechanism.
+
+The main example prints the development API URL and a timeout of 30 seconds.
+Run it from the repository root so its included file paths resolve correctly.
 
 With no overrides, the native example selects development and prints
 `API: https://dev.example.com; timeout: 15s`. Its public
 [dotenv fixture](example/config/overrides.env) overrides the JSON timeout of 30.
-A local `.env` or process variable can override it again. Unknown selections in
-the main example fail because it enables strict mode.
+A local `.env` or process variable can override it again. The advanced walkthrough
+enables strict environment selection. The main example skips a missing optional
+overlay and keeps its base settings.
 
 ## Quick start: appsettings-style configuration
 
@@ -123,10 +128,11 @@ Future<void> main() async {
 }
 ```
 
-Save this as `example/appsettings_demo.dart` and run it from the repository root:
+The [main example](example/envx_example.dart) runs this flow and also accepts
+process overrides. Run it from the repository root:
 
 ```sh
-dart run -DENVIRONMENT=production example/appsettings_demo.dart
+dart run -DENVIRONMENT=production example/envx_example.dart
 ```
 
 The paths above use the repository's existing JSON fixtures. In your own native
@@ -554,7 +560,7 @@ Scalar/object collisions such as `APP__api` plus `APP__api__timeout` fail.
 Dotenv supports comments, empty values, `export`, and single/double quotes.
 Double quotes support common escapes; interpolation and shell execution are not
 performed. Use `parseDotEnv(text)` and `nestEnvironmentValues(...)` when the text
-already comes from another loader, as the main example demonstrates.
+already comes from another loader, as the advanced walkthrough demonstrates.
 
 Override the native example on macOS/Linux:
 
@@ -594,7 +600,7 @@ Future<ConfigValues> loadSettings() {
 }
 ```
 
-The main example runs this pattern. A source returns a complete JSON-compatible
+The advanced walkthrough runs this pattern. A source returns a complete JSON-compatible
 map on each load. Its owner controls resource cleanup, transport timeouts, and
 safe error messages. Use a loader your application already owns for remote data
 or Flutter assets; 2.0.0 does not include a first-party HTTP or asset adapter.

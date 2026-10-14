@@ -27,7 +27,7 @@ jobs:
       - run: dart test
       - run: dart run example/minimal_example.dart
       - run: dart run example/envx_example.dart
-      - run: dart run -DAPP_ENV=production example/envx_example.dart
+      - run: dart run -DENVIRONMENT=production example/envx_example.dart
       - run: dart run example/configuration_example.dart
       - name: Compile core for web
         run: dart compile js -DAPP_ENV=prod -DCUSTOM_ENV=prod tool/compile_smoke.dart -o smoke.js

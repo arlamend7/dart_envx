@@ -1,6 +1,6 @@
 # Release validation
 
-Version **2.0.0** is the stable release, dated **2026-10-12**. The changelog,
+Version **2.0.1** is the documentation/example patch, dated **2026-10-14**. The changelog,
 public documentation, and package metadata describe that release. Publication
 to pub.dev and GitHub tags are separate distribution steps; the validation
 commands below do not publish the package.
@@ -16,7 +16,7 @@ dart analyze --fatal-infos
 dart test
 dart run example/minimal_example.dart
 dart run example/envx_example.dart
-dart run -DAPP_ENV=production example/envx_example.dart
+dart run -DENVIRONMENT=production example/envx_example.dart
 dart run example/configuration_example.dart
 dart compile exe -DAPP_ENV=prod -DCUSTOM_ENV=prod tool/compile_smoke.dart -o /tmp/envx-smoke
 /tmp/envx-smoke

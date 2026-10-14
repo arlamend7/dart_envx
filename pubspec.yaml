@@ -1,37 +1,27 @@
 name: envx
 description: >-
-  Typed environment selection and layered JSON, dotenv, memory, and native
-  process configuration for Dart and Flutter, without global state.
-# Stable release; see CHANGELOG.md for version history and release scope.
-version: 2.0.0
+  Layered appsettings-style configuration for Dart and Flutter, with JSON,
+  dotenv, environment overrides, typed values, and validation.
+version: 2.0.1
 repository: https://github.com/arlamend7/dart_envx
 homepage: https://github.com/arlamend7/dart_envx
-issue_tracker: https://github.com/arlamend7/dart_envx/issues
-# Hosted API reference. README.md and doc/ contain guides for this checkout.
 documentation: https://arlamend7.github.io/dart_envx/
-# Example entry point for repository readers and tooling. pub.dev discovers its
-# Example tab from conventional files under example/; this is custom metadata.
-# Run: dart run example/envx_example.dart
-example: example/envx_example.dart
-# Short quick start: example/minimal_example.dart
-# Native JSON/dotenv/process providers: example/configuration_example.dart
-topics:
-  - environment
-  - configuration
-  - dotenv
-  - json
+issue_tracker: https://github.com/arlamend7/dart_envx/issues
 
-# Core and native adapters need no Flutter SDK and have no runtime dependencies.
-# Keep Dart 3.0 support; CI resolves dependencies separately on minimum/current SDKs.
+# Runnable entry point. pub.dev discovers example/README.md for its Example tab.
+example: example/envx_example.dart
+
+topics:
+  - configuration
+  - environment
+  - json
+  - dotenv
+
+# Pure Dart core; Flutter is not required. Native adapters use envx_io.dart.
 environment:
   sdk: '>=3.0.0 <4.0.0'
 
+# No runtime dependencies. Resolve SDK-compatible development tools on Dart 3.0+.
 dev_dependencies:
-  # Allow SDK-compatible lints on Dart 3.0 and current lints on newer SDKs.
   lints: '>=2.1.1 <7.0.0'
   test: ^1.24.0
-
-# Flutter applications can use envx.dart directly. envx_io.dart is native-only.
-# Asset loading is a future adapter, not a shipped API in this release.
-# Do not declare application assets here: they belong in the consuming app's
-# flutter/assets section. See doc/ROADMAP.md for the Flutter milestone.
